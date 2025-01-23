@@ -36,30 +36,19 @@ func IsTrustedIP(ip string) bool {
 
 // VerifyHMAC проверяет подлинность и целостность уведомления с использованием HMAC. [https://developers.cloudpayments.ru/#proverka-uvedomleniy]
 // Входные параметры:
-//   - method: HTTP-метод (например, "POST" или "GET").
 //   - body: тело запроса (для POST) или строка параметров (для GET).
 //   - contentHMAC: значение заголовка Content-HMAC, генерируется из URL encoded параметров.
 //   - apiSecret: секретный ключ API.
 //
 // Возвращаемое значение: ошибка, если проверка не прошла.
-func VerifyHMAC(method, body, contentHMAC, apiSecret string) error {
-	// Проверяем наличие хотя бы одного HMAC-заголовка.
+func VerifyHMAC(body []byte, contentHMAC, apiSecret string) error {
+	// Проверяем наличие HMAC-заголовка.
 	if contentHMAC == "" {
 		return errors.New("missing contentHMAC")
 	}
 
-	// Определяем сообщение для вычисления HMAC.
-	var message string
-	if method == "POST" {
-		message = body
-	} else if method == "GET" {
-		message = body
-	} else {
-		return errors.New("unsupported HTTP method")
-	}
-
 	// Вычисляем HMAC для сообщения.
-	computedHMAC, err := computeHMAC(message, apiSecret)
+	computedHMAC, err := computeHMAC(body, apiSecret)
 	if err != nil {
 		return err
 	}
@@ -75,9 +64,9 @@ func VerifyHMAC(method, body, contentHMAC, apiSecret string) error {
 // computeHMAC вычисляет HMAC для сообщения с использованием API Secret.
 // Входные параметры: message - сообщение, apiSecret - секретный ключ API.
 // Возвращаемое значение: HMAC в формате base64 и ошибка, если она возникла.
-func computeHMAC(message, apiSecret string) (string, error) {
+func computeHMAC(message []byte, apiSecret string) (string, error) {
 	mac := hmac.New(sha256.New, []byte(apiSecret))
-	_, err := mac.Write([]byte(message))
+	_, err := mac.Write(message)
 	if err != nil {
 		return "", err
 	}
